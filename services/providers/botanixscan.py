@@ -22,7 +22,7 @@ class BotanixScanProvider(EtherscanV2Provider):
             action=action_name,
             limit=1,
         )
-        if network.get("chain_id"):
+        if network.get("include_chainid_param", False) and network.get("chain_id"):
             params["chainid"] = network["chain_id"]
         return self._diagnostic_from_params(
             network=network,
@@ -43,7 +43,7 @@ class BotanixScanProvider(EtherscanV2Provider):
             "offset": limit or self.limit,
             "apikey": self.api_key,
         }
-        if network.get("chain_id"):
+        if network.get("include_chainid_param", False) and network.get("chain_id"):
             params["chainid"] = network["chain_id"]
 
         if not self.api_key:

@@ -108,7 +108,7 @@
     "native_symbol": "BTC",
     "explorer_url": "https://botanixscan.io",
     "api_provider": "botanixscan",
-    "api_base_url": "https://api.botanixscan.io/api",
+    "api_base_url": "https://api.routescan.io/v2/network/mainnet/evm/3637/etherscan/api",
     "native_action": "txlist",
     "token_action": "tokentx",
     "transactions_endpoint": "",

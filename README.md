@@ -107,6 +107,7 @@ cp wallets.example.json wallets.json
 Для Etherscan-style API у BotanixScan можно настроить account API actions:
 
 ```json
+"api_base_url": "https://api.routescan.io/v2/network/mainnet/evm/3637/etherscan/api",
 "native_action": "txlist",
 "token_action": "tokentx"
 ```
