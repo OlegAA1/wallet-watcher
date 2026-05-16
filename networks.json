@@ -11,7 +11,9 @@
     "chain_id": 8453,
     "native_symbol": "ETH",
     "explorer_url": "https://basescan.org",
-    "api_provider": "etherscan_v2"
+    "api_provider": "blockpi_rpc",
+    "rpc_url_env": "BLOCKPI_BASE_RPC_URL",
+    "rpc_scan_blocks": 300
   },
   {
     "name": "Linea",
@@ -39,7 +41,9 @@
     "chain_id": 43114,
     "native_symbol": "AVAX",
     "explorer_url": "https://snowtrace.io",
-    "api_provider": "etherscan_v2"
+    "api_provider": "blockpi_rpc",
+    "rpc_url_env": "BLOCKPI_AVALANCHE_RPC_URL",
+    "rpc_scan_blocks": 300
   },
   {
     "name": "opBNB",
@@ -60,7 +64,9 @@
     "chain_id": 10,
     "native_symbol": "ETH",
     "explorer_url": "https://optimistic.etherscan.io",
-    "api_provider": "etherscan_v2"
+    "api_provider": "blockpi_rpc",
+    "rpc_url_env": "BLOCKPI_OPTIMISM_RPC_URL",
+    "rpc_scan_blocks": 300
   },
   {
     "name": "Scroll",

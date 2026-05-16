@@ -34,6 +34,11 @@ def load_settings() -> dict:
         "etherscan_api_key": os.getenv("ETHERSCAN_API_KEY", ""),
         "blockscout_api_key": os.getenv("BLOCKSCOUT_API_KEY", ""),
         "botanixscan_api_key": os.getenv("BOTANIXSCAN_API_KEY", ""),
+        "blockpi_rpc_urls": {
+            "BLOCKPI_BASE_RPC_URL": os.getenv("BLOCKPI_BASE_RPC_URL", ""),
+            "BLOCKPI_AVALANCHE_RPC_URL": os.getenv("BLOCKPI_AVALANCHE_RPC_URL", ""),
+            "BLOCKPI_OPTIMISM_RPC_URL": os.getenv("BLOCKPI_OPTIMISM_RPC_URL", ""),
+        },
         "telegram_bot_token": os.getenv("TELEGRAM_BOT_TOKEN", ""),
         "telegram_chat_id": os.getenv("TELEGRAM_CHAT_ID", ""),
         "check_interval_seconds": _int_env("CHECK_INTERVAL_SECONDS", 300),

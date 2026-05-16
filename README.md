@@ -48,6 +48,9 @@ cp .env.example .env
 ETHERSCAN_API_KEY=your_etherscan_api_key
 BLOCKSCOUT_API_KEY=your_blockscout_api_key
 BOTANIXSCAN_API_KEY=your_botanixscan_api_key
+BLOCKPI_BASE_RPC_URL=
+BLOCKPI_AVALANCHE_RPC_URL=
+BLOCKPI_OPTIMISM_RPC_URL=
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_CHAT_ID=your_telegram_chat_id
 CHECK_INTERVAL_SECONDS=300
@@ -111,6 +114,21 @@ cp wallets.example.json wallets.json
 "native_action": "txlist",
 "token_action": "tokentx"
 ```
+
+Base, Avalanche и Optimism можно мониторить через BlockPI RPC endpoint-ы. URL с ключами храните только в `.env`:
+
+```bash
+BLOCKPI_BASE_RPC_URL=https://base.blockpi.network/v1/rpc/your-rpc-key
+BLOCKPI_AVALANCHE_RPC_URL=https://avalanche.blockpi.network/v1/rpc/your-rpc-key
+BLOCKPI_OPTIMISM_RPC_URL=https://optimism-classic.blockpi.network/v1/rpc/your-rpc-key
+```
+
+Для этих сетей provider `blockpi_rpc` сканирует последние блоки:
+
+- native outgoing tx ищутся в транзакциях блоков
+- ERC-20 outgoing transfers ищутся через `eth_getLogs` по событию `Transfer`
+
+Количество блоков задается в `networks.json` через `rpc_scan_blocks`. По умолчанию для этих сетей стоит `300`, чтобы оставаться ниже типичных RPC-лимитов на диапазон `eth_getLogs`.
 
 ## Проверка Telegram
 

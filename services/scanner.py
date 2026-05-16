@@ -5,6 +5,7 @@ import threading
 
 from services.notifier import TelegramNotifier
 from services.providers.blockscout import BlockscoutProvider
+from services.providers.blockpi_rpc import BlockPiRpcProvider
 from services.providers.botanixscan import BotanixScanProvider
 from services.providers.etherscan_v2 import EtherscanV2Provider
 from services.storage import StateStorage
@@ -205,6 +206,11 @@ class WalletScanner:
             ),
             "botanixscan": BotanixScanProvider(
                 api_key=self.settings["botanixscan_api_key"],
+                timeout=timeout,
+                limit=limit,
+            ),
+            "blockpi_rpc": BlockPiRpcProvider(
+                rpc_urls=self.settings["blockpi_rpc_urls"],
                 timeout=timeout,
                 limit=limit,
             ),
