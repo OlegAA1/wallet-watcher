@@ -54,7 +54,7 @@ BLOCKPI_OPTIMISM_RPC_URL=
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_CHAT_ID=your_telegram_chat_id
 API_CHECK_INTERVAL_SECONDS=300
-BLOCKPI_CHECK_INTERVAL_SECONDS=108000
+BLOCKPI_CHECK_INTERVAL_SECONDS=300
 ```
 
 `.env` добавлен в `.gitignore`. Не коммитьте его, не вставляйте в чаты и не храните секреты в истории shell.
@@ -141,10 +141,10 @@ BLOCKPI_OPTIMISM_RPC_URL=https://optimism-classic.blockpi.network/v1/rpc/your-rp
 BlockPI сети проверяются отдельным интервалом:
 
 ```bash
-BLOCKPI_CHECK_INTERVAL_SECONDS=108000
+BLOCKPI_CHECK_INTERVAL_SECONDS=300
 ```
 
-`108000` секунд = 30 часов. Это дефолт, рассчитанный с запасом под 100 кошельков и бесплатные `50M RU` в месяц при текущем сканировании 3 BlockPI сетей.
+Дефолт `300` секунд выбран так, чтобы окно `rpc_scan_blocks=300` не пропускало события на быстрых EVM-сетях. Если поставить большой интервал, например 30 часов, то текущая реализация будет видеть только последние `rpc_scan_blocks` блоков и может пропустить исходящие транзакции.
 
 ## Проверка Telegram
 
@@ -197,14 +197,16 @@ python main.py --once
 python main.py
 ```
 
-По умолчанию обычные explorer/API сети проверяются каждые 5 минут, а BlockPI сети каждые 30 часов. Интервалы можно изменить в `.env`:
+По умолчанию обычные explorer/API сети и BlockPI сети проверяются каждые 5 минут. Интервалы можно изменить в `.env`:
 
 ```bash
 API_CHECK_INTERVAL_SECONDS=300
-BLOCKPI_CHECK_INTERVAL_SECONDS=108000
+BLOCKPI_CHECK_INTERVAL_SECONDS=300
 ```
 
 Старый `CHECK_INTERVAL_SECONDS` еще поддерживается как fallback для `API_CHECK_INTERVAL_SECONDS`, если новая переменная не указана.
+
+Для большого числа кошельков, например 100+, текущий BlockPI provider может быть дорогим по RPC-запросам, потому что сканирует блоки отдельно для каждого кошелька. Для такого масштаба лучше доработать сканирование по сети один раз за цикл и сравнивать найденные транзакции со всеми адресами.
 
 Если новых исходящих транзакций или token transfers нет, Telegram молчит.
 

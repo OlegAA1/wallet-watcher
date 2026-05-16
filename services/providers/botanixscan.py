@@ -42,7 +42,7 @@ class BotanixScanProvider(EtherscanV2Provider):
             "sort": "desc",
             "page": 1,
             "offset": limit or self.limit,
-            "apikey": self.api_key,
+            "apikey": self._api_key(address),
         }
         if network.get("include_chainid_param", False) and network.get("chain_id"):
             params["chainid"] = network["chain_id"]

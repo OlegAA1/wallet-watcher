@@ -44,7 +44,7 @@ def load_settings() -> dict:
         "telegram_chat_id": os.getenv("TELEGRAM_CHAT_ID", ""),
         "check_interval_seconds": legacy_interval,
         "api_check_interval_seconds": _int_env("API_CHECK_INTERVAL_SECONDS", legacy_interval),
-        "blockpi_check_interval_seconds": _int_env("BLOCKPI_CHECK_INTERVAL_SECONDS", 108000),
+        "blockpi_check_interval_seconds": _int_env("BLOCKPI_CHECK_INTERVAL_SECONDS", 300),
         "request_timeout_seconds": 20,
         "fetch_limit": 50,
         "state_max_hashes": 500,
