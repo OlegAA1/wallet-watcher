@@ -1,0 +1,117 @@
+[
+  {
+    "name": "Ethereum",
+    "chain_id": 1,
+    "native_symbol": "ETH",
+    "explorer_url": "https://etherscan.io",
+    "api_provider": "etherscan_v2"
+  },
+  {
+    "name": "Base",
+    "chain_id": 8453,
+    "native_symbol": "ETH",
+    "explorer_url": "https://basescan.org",
+    "api_provider": "etherscan_v2"
+  },
+  {
+    "name": "Linea",
+    "chain_id": 59144,
+    "native_symbol": "ETH",
+    "explorer_url": "https://lineascan.build",
+    "api_provider": "etherscan_v2"
+  },
+  {
+    "name": "Arbitrum",
+    "chain_id": 42161,
+    "native_symbol": "ETH",
+    "explorer_url": "https://arbiscan.io",
+    "api_provider": "etherscan_v2"
+  },
+  {
+    "name": "Polygon",
+    "chain_id": 137,
+    "native_symbol": "POL",
+    "explorer_url": "https://polygonscan.com",
+    "api_provider": "etherscan_v2"
+  },
+  {
+    "name": "Avalanche",
+    "chain_id": 43114,
+    "native_symbol": "AVAX",
+    "explorer_url": "https://snowtrace.io",
+    "api_provider": "etherscan_v2"
+  },
+  {
+    "name": "opBNB",
+    "chain_id": 204,
+    "native_symbol": "BNB",
+    "explorer_url": "https://opbnbscan.com",
+    "api_provider": "etherscan_v2"
+  },
+  {
+    "name": "Taiko",
+    "chain_id": 167000,
+    "native_symbol": "ETH",
+    "explorer_url": "https://taikoscan.io",
+    "api_provider": "etherscan_v2"
+  },
+  {
+    "name": "Optimism",
+    "chain_id": 10,
+    "native_symbol": "ETH",
+    "explorer_url": "https://optimistic.etherscan.io",
+    "api_provider": "etherscan_v2"
+  },
+  {
+    "name": "Scroll",
+    "chain_id": 534352,
+    "native_symbol": "ETH",
+    "explorer_url": "https://scrollscan.com",
+    "api_provider": "blockscout",
+    "api_base_url": "https://blockscout.scroll.io/api/v2",
+    "transactions_endpoint": "/addresses/{address}/transactions",
+    "token_transfers_endpoint": "/addresses/{address}/token-transfers"
+  },
+  {
+    "name": "Zora",
+    "chain_id": 7777777,
+    "native_symbol": "ETH",
+    "explorer_url": "https://explorer.zora.energy",
+    "api_provider": "blockscout",
+    "api_base_url": "https://explorer.zora.energy/api/v2",
+    "transactions_endpoint": "/addresses/{address}/transactions",
+    "token_transfers_endpoint": "/addresses/{address}/token-transfers"
+  },
+  {
+    "name": "Plume",
+    "chain_id": 98866,
+    "native_symbol": "PLUME",
+    "explorer_url": "https://explorer.plume.org",
+    "api_provider": "blockscout",
+    "api_base_url": "https://explorer.plume.org/api/v2",
+    "transactions_endpoint": "/addresses/{address}/transactions",
+    "token_transfers_endpoint": "/addresses/{address}/token-transfers"
+  },
+  {
+    "name": "Gravity",
+    "chain_id": 1625,
+    "native_symbol": "G",
+    "explorer_url": "https://explorer.gravity.xyz",
+    "api_provider": "blockscout",
+    "api_base_url": "https://explorer.gravity.xyz/api/v2",
+    "transactions_endpoint": "/addresses/{address}/transactions",
+    "token_transfers_endpoint": "/addresses/{address}/token-transfers"
+  },
+  {
+    "name": "Botanix",
+    "chain_id": 3637,
+    "native_symbol": "BTC",
+    "explorer_url": "https://botanixscan.io",
+    "api_provider": "botanixscan",
+    "api_base_url": "https://api.botanixscan.io/api",
+    "native_action": "txlist",
+    "token_action": "tokentx",
+    "transactions_endpoint": "",
+    "token_transfers_endpoint": ""
+  }
+]

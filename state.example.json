@@ -1,0 +1,8 @@
+{
+  "Ethereum:0x123:native": [
+    "0xhash1"
+  ],
+  "Ethereum:0x123:erc20": [
+    "0xhash2"
+  ]
+}

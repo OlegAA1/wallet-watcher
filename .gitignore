@@ -1,0 +1,8 @@
+.env
+state.json
+wallets.json
+logs/
+__pycache__/
+*.pyc
+.venv/
+venv/
