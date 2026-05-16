@@ -30,18 +30,21 @@ def setup_logging() -> None:
 
 def load_settings() -> dict:
     load_dotenv(BASE_DIR / ".env")
+    legacy_interval = _int_env("CHECK_INTERVAL_SECONDS", 300)
     return {
-        "etherscan_api_key": os.getenv("ETHERSCAN_API_KEY", ""),
-        "blockscout_api_key": os.getenv("BLOCKSCOUT_API_KEY", ""),
-        "botanixscan_api_key": os.getenv("BOTANIXSCAN_API_KEY", ""),
+        "etherscan_api_keys": _list_env("ETHERSCAN_API_KEY"),
+        "blockscout_api_keys": _list_env("BLOCKSCOUT_API_KEY"),
+        "botanixscan_api_keys": _list_env("BOTANIXSCAN_API_KEY"),
         "blockpi_rpc_urls": {
-            "BLOCKPI_BASE_RPC_URL": os.getenv("BLOCKPI_BASE_RPC_URL", ""),
-            "BLOCKPI_AVALANCHE_RPC_URL": os.getenv("BLOCKPI_AVALANCHE_RPC_URL", ""),
-            "BLOCKPI_OPTIMISM_RPC_URL": os.getenv("BLOCKPI_OPTIMISM_RPC_URL", ""),
+            "BLOCKPI_BASE_RPC_URL": _list_env("BLOCKPI_BASE_RPC_URL"),
+            "BLOCKPI_AVALANCHE_RPC_URL": _list_env("BLOCKPI_AVALANCHE_RPC_URL"),
+            "BLOCKPI_OPTIMISM_RPC_URL": _list_env("BLOCKPI_OPTIMISM_RPC_URL"),
         },
         "telegram_bot_token": os.getenv("TELEGRAM_BOT_TOKEN", ""),
         "telegram_chat_id": os.getenv("TELEGRAM_CHAT_ID", ""),
-        "check_interval_seconds": _int_env("CHECK_INTERVAL_SECONDS", 300),
+        "check_interval_seconds": legacy_interval,
+        "api_check_interval_seconds": _int_env("API_CHECK_INTERVAL_SECONDS", legacy_interval),
+        "blockpi_check_interval_seconds": _int_env("BLOCKPI_CHECK_INTERVAL_SECONDS", 108000),
         "request_timeout_seconds": 20,
         "fetch_limit": 50,
         "state_max_hashes": 500,
@@ -54,6 +57,11 @@ def _int_env(name: str, default: int) -> int:
     except ValueError:
         logging.getLogger(__name__).error("%s must be an integer; using %s", name, default)
         return default
+
+
+def _list_env(name: str) -> list[str]:
+    value = os.getenv(name, "")
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 def load_json_file(path: Path, default):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 
 from services.notifier import TelegramNotifier
 from services.providers.blockscout import BlockscoutProvider
@@ -31,14 +32,15 @@ class WalletScanner:
         self.providers = self._build_providers()
         self.stop_event = threading.Event()
 
-    def run_once(self) -> None:
+    def run_once(self, networks: list[dict] | None = None) -> None:
         initial_state_changed = False
+        scan_networks = networks if networks is not None else self.networks
 
         for wallet in self._enabled_wallets():
             if self.stop_event.is_set():
                 break
             wallet_address = wallet["address"]
-            for network in self.networks:
+            for network in scan_networks:
                 if self.stop_event.is_set():
                     break
                 provider = self.providers.get(network.get("api_provider"))
@@ -96,10 +98,41 @@ class WalletScanner:
             return False
 
     def run_forever(self) -> None:
-        interval = self.settings["check_interval_seconds"]
+        api_interval = self.settings["api_check_interval_seconds"]
+        blockpi_interval = self.settings["blockpi_check_interval_seconds"]
+        api_networks = self._networks_without_provider("blockpi_rpc")
+        blockpi_networks = self._networks_with_provider("blockpi_rpc")
+        next_api_scan = 0.0
+        next_blockpi_scan = 0.0
+
+        logger.info("API scan interval: %s seconds", api_interval)
+        logger.info("BlockPI scan interval: %s seconds", blockpi_interval)
+
         while not self.stop_event.is_set():
-            self.run_once()
-            self.stop_event.wait(interval)
+            now = time.monotonic()
+            next_wake = None
+
+            if api_networks and now >= next_api_scan:
+                logger.info("Running API scan for %s networks", len(api_networks))
+                self.run_once(api_networks)
+                next_api_scan = time.monotonic() + api_interval
+
+            if blockpi_networks and not self.stop_event.is_set() and now >= next_blockpi_scan:
+                logger.info("Running BlockPI scan for %s networks", len(blockpi_networks))
+                self.run_once(blockpi_networks)
+                next_blockpi_scan = time.monotonic() + blockpi_interval
+
+            if api_networks:
+                next_wake = next_api_scan if next_wake is None else min(next_wake, next_api_scan)
+            if blockpi_networks:
+                next_wake = next_blockpi_scan if next_wake is None else min(next_wake, next_blockpi_scan)
+            if next_wake is None:
+                logger.warning("No networks configured; waiting %s seconds", api_interval)
+                self.stop_event.wait(api_interval)
+                continue
+
+            wait_seconds = max(1.0, next_wake - time.monotonic())
+            self.stop_event.wait(wait_seconds)
 
     def stop(self) -> None:
         self.stop_event.set()
@@ -190,22 +223,36 @@ class WalletScanner:
             if wallet.get("enabled", True) and wallet.get("address")
         ]
 
+    def _networks_with_provider(self, provider_name: str) -> list[dict]:
+        return [
+            network
+            for network in self.networks
+            if network.get("api_provider") == provider_name
+        ]
+
+    def _networks_without_provider(self, provider_name: str) -> list[dict]:
+        return [
+            network
+            for network in self.networks
+            if network.get("api_provider") != provider_name
+        ]
+
     def _build_providers(self) -> dict:
         timeout = self.settings["request_timeout_seconds"]
         limit = self.settings["fetch_limit"]
         return {
             "etherscan_v2": EtherscanV2Provider(
-                api_key=self.settings["etherscan_api_key"],
+                api_key=self.settings["etherscan_api_keys"],
                 timeout=timeout,
                 limit=limit,
             ),
             "blockscout": BlockscoutProvider(
-                api_key=self.settings["blockscout_api_key"],
+                api_key=self.settings["blockscout_api_keys"],
                 timeout=timeout,
                 limit=limit,
             ),
             "botanixscan": BotanixScanProvider(
-                api_key=self.settings["botanixscan_api_key"],
+                api_key=self.settings["botanixscan_api_keys"],
                 timeout=timeout,
                 limit=limit,
             ),

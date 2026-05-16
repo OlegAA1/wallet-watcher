@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urljoin
 
@@ -11,8 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 class BlockscoutProvider:
-    def __init__(self, api_key: str = "", timeout: int = 20, limit: int = 50):
-        self.api_key = api_key
+    def __init__(self, api_key: str | Sequence[str] = "", timeout: int = 20, limit: int = 50):
+        if isinstance(api_key, str):
+            self.api_keys = [api_key] if api_key else []
+        else:
+            self.api_keys = [key for key in api_key if key]
         self.timeout = timeout
         self.limit = limit
 
@@ -43,7 +47,7 @@ class BlockscoutProvider:
                 "provider": "blockscout",
                 "chain_id": network.get("chain_id"),
                 "endpoint": network.get("api_base_url", "not configured"),
-                "api_key": mask_secret(self.api_key),
+                "api_key": mask_secret(self._api_key(address)),
                 "response_received": False,
                 "auth_error": False,
                 "plan_or_unsupported_error": False,
@@ -59,7 +63,7 @@ class BlockscoutProvider:
             "provider": "blockscout",
             "chain_id": network.get("chain_id"),
             "endpoint": f"{url}?limit={params['limit']}",
-            "api_key": mask_secret(self.api_key),
+            "api_key": mask_secret(self._api_key(address)),
             "response_received": response["response_received"],
             "http_status": response["http_status"],
             **classification,
@@ -78,11 +82,22 @@ class BlockscoutProvider:
         url = urljoin(base_url.rstrip("/") + "/", path.lstrip("/"))
         params = {"limit": limit}
         headers = {}
-        if self.api_key:
+        api_key = self._api_key(address)
+        if api_key:
             header_name = network.get("api_key_header", "Authorization")
             header_prefix = network.get("api_key_prefix", "Bearer ")
-            headers[header_name] = f"{header_prefix}{self.api_key}" if header_prefix else self.api_key
+            headers[header_name] = f"{header_prefix}{api_key}" if header_prefix else api_key
         return url, params, headers
+
+    def _api_key(self, address: str) -> str:
+        if not self.api_keys:
+            return ""
+        normalized = address.lower().replace("0x", "")
+        try:
+            index = int(normalized[-8:] or "0", 16) % len(self.api_keys)
+        except ValueError:
+            index = 0
+        return self.api_keys[index]
 
     def _items(self, data: dict | list) -> list[dict]:
         if isinstance(data, list):

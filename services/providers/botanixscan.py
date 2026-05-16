@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 
 from services.providers.common import ProviderError, RateLimitError, is_rate_limit_message
 from services.providers.etherscan_v2 import EtherscanV2Provider
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class BotanixScanProvider(EtherscanV2Provider):
-    def __init__(self, api_key: str, timeout: int = 20, limit: int = 50):
+    def __init__(self, api_key: str | Sequence[str], timeout: int = 20, limit: int = 50):
         super().__init__(api_key=api_key, timeout=timeout, limit=limit)
 
     def diagnostic_network(self, network: dict) -> dict:
@@ -46,7 +47,7 @@ class BotanixScanProvider(EtherscanV2Provider):
         if network.get("include_chainid_param", False) and network.get("chain_id"):
             params["chainid"] = network["chain_id"]
 
-        if not self.api_key:
+        if not self.api_keys:
             raise ValueError("BOTANIXSCAN_API_KEY is not configured")
 
         data = self._get_account_response(base_url, params)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Sequence
 from decimal import Decimal, InvalidOperation
 
 from services.providers.common import (
@@ -22,8 +23,11 @@ ETHERSCAN_V2_URL = "https://api.etherscan.io/v2/api"
 
 
 class EtherscanV2Provider:
-    def __init__(self, api_key: str, timeout: int = 20, limit: int = 50):
-        self.api_key = api_key
+    def __init__(self, api_key: str | Sequence[str], timeout: int = 20, limit: int = 50):
+        if isinstance(api_key, str):
+            self.api_keys = [api_key] if api_key else []
+        else:
+            self.api_keys = [key for key in api_key if key]
         self.timeout = timeout
         self.limit = limit
 
@@ -56,7 +60,7 @@ class EtherscanV2Provider:
         )
 
     def _request(self, network: dict, address: str, action: str, limit: int | None = None) -> list[dict]:
-        if not self.api_key:
+        if not self.api_keys:
             raise ValueError("ETHERSCAN_API_KEY is not configured")
 
         params = self._build_params(network=network, address=address, action=action, limit=limit or self.limit)
@@ -85,18 +89,18 @@ class EtherscanV2Provider:
             "sort": "desc",
             "page": 1,
             "offset": limit,
-            "apikey": self.api_key,
+            "apikey": self._api_key(address),
         }
 
     def _diagnostic_from_params(self, network: dict, provider_name: str, url: str, params: dict) -> dict:
         endpoint = endpoint_with_masked_params(url, params, secret_keys=("apikey",))
-        if not self.api_key:
+        if not self.api_keys:
             return {
                 "network": network.get("name", "Unknown"),
                 "provider": provider_name,
                 "chain_id": network.get("chain_id"),
                 "endpoint": endpoint,
-                "api_key": mask_secret(self.api_key),
+                "api_key": mask_secret(""),
                 "response_received": False,
                 "auth_error": True,
                 "plan_or_unsupported_error": False,
@@ -112,11 +116,21 @@ class EtherscanV2Provider:
             "provider": provider_name,
             "chain_id": network.get("chain_id"),
             "endpoint": endpoint,
-            "api_key": mask_secret(self.api_key),
+            "api_key": mask_secret(params.get("apikey", "")),
             "response_received": response["response_received"],
             "http_status": response["http_status"],
             **classification,
         }
+
+    def _api_key(self, address: str) -> str:
+        if not self.api_keys:
+            return ""
+        normalized = address.lower().replace("0x", "")
+        try:
+            index = int(normalized[-8:] or "0", 16) % len(self.api_keys)
+        except ValueError:
+            index = 0
+        return self.api_keys[index]
 
     def _get_account_response(self, url: str, params: dict) -> dict:
         for attempt in range(3):

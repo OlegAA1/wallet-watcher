@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from decimal import Decimal
 from urllib.parse import urlsplit, urlunsplit
 
@@ -15,14 +16,14 @@ DECIMALS_SELECTOR = "0x313ce567"
 
 
 class BlockPiRpcProvider:
-    def __init__(self, rpc_urls: dict[str, str], timeout: int = 20, limit: int = 50):
+    def __init__(self, rpc_urls: dict[str, str | Sequence[str]], timeout: int = 20, limit: int = 50):
         self.rpc_urls = rpc_urls
         self.timeout = timeout
         self.limit = limit
         self.token_cache: dict[tuple[int, str], dict] = {}
 
     def get_native_transactions(self, network: dict, address: str) -> list[dict]:
-        url = self._rpc_url(network)
+        url = self._rpc_url(network, address)
         latest_block = self._latest_block(url)
         from_block = max(0, latest_block - int(network.get("rpc_scan_blocks", 300)) + 1)
         normalized_address = address.lower()
@@ -52,7 +53,7 @@ class BlockPiRpcProvider:
         return events
 
     def get_token_transfers(self, network: dict, address: str) -> list[dict]:
-        url = self._rpc_url(network)
+        url = self._rpc_url(network, address)
         latest_block = self._latest_block(url)
         from_block = max(0, latest_block - int(network.get("rpc_scan_blocks", 300)) + 1)
         logs = self._rpc(
@@ -113,12 +114,25 @@ class BlockPiRpcProvider:
                 rate_limit_error=_is_rate_limit_error(message),
             )
 
-    def _rpc_url(self, network: dict) -> str:
+    def _rpc_url(self, network: dict, address: str = "") -> str:
         env_name = network.get("rpc_url_env", "")
-        url = self.rpc_urls.get(env_name, "")
-        if not url:
+        urls = self._urls(env_name)
+        if not urls:
             raise ValueError(f"{env_name or 'RPC URL'} is not configured")
-        return url
+        if not address:
+            return urls[0]
+        normalized = address.lower().replace("0x", "")
+        try:
+            index = int(normalized[-8:] or "0", 16) % len(urls)
+        except ValueError:
+            index = 0
+        return urls[index]
+
+    def _urls(self, env_name: str) -> list[str]:
+        value = self.rpc_urls.get(env_name, [])
+        if isinstance(value, str):
+            return [value] if value else []
+        return [url for url in value if url]
 
     def _latest_block(self, url: str) -> int:
         return int(self._rpc(url, "eth_blockNumber", []), 16)
