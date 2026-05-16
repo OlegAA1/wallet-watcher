@@ -1,13 +1,13 @@
 # wallet-watcher
 
-`wallet-watcher` monitors public EVM wallet addresses across configured networks and sends Telegram alerts only for new outgoing movements:
+`wallet-watcher` отслеживает публичные EVM-адреса в разных сетях и отправляет уведомления в Telegram только при новых исходящих движениях:
 
-- native coin transactions where `from` equals your wallet address
-- ERC-20 token transfers where `from` equals your wallet address
+- обычные исходящие транзакции native coin, где `from` равен адресу вашего кошелька
+- исходящие ERC-20 token transfers, где `from` равен адресу вашего кошелька
 
-It never uses seed phrases, private keys, wallet passwords, browser profiles, wallet extensions, signatures, or wallet actions. The script only reads public explorer/API data.
+Скрипт не использует seed phrase, private key, пароль от кошелька, браузерные профили, расширения кошельков, подписи транзакций или любые действия с кошельками. Он только читает публичные данные explorer/API.
 
-## Supported networks in v1
+## Поддерживаемые сети в v1
 
 - Ethereum
 - Base
@@ -24,9 +24,9 @@ It never uses seed phrases, private keys, wallet passwords, browser profiles, wa
 - Gravity
 - Optimism / OP Mainnet
 
-## Install dependencies
+## Установка зависимостей
 
-Use Python 3.10+.
+Нужен Python 3.10+.
 
 ```bash
 python -m venv .venv
@@ -34,15 +34,15 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Configure `.env`
+## Настройка `.env`
 
-Create a local `.env` file from the example:
+Создайте локальный `.env` из примера:
 
 ```bash
 cp .env.example .env
 ```
 
-Fill in:
+Заполните переменные:
 
 ```bash
 ETHERSCAN_API_KEY=your_etherscan_api_key
@@ -53,17 +53,17 @@ TELEGRAM_CHAT_ID=your_telegram_chat_id
 CHECK_INTERVAL_SECONDS=300
 ```
 
-`.env` is listed in `.gitignore`. Do not commit it, paste it into chats, or store it in shell history.
+`.env` добавлен в `.gitignore`. Не коммитьте его, не вставляйте в чаты и не храните секреты в истории shell.
 
-## Configure wallets
+## Настройка кошельков
 
-Create a local `wallets.json` file from the public example:
+Создайте локальный `wallets.json` из публичного примера:
 
 ```bash
 cp wallets.example.json wallets.json
 ```
 
-Edit `wallets.json`:
+Отредактируйте `wallets.json`:
 
 ```json
 [
@@ -75,21 +75,21 @@ Edit `wallets.json`:
 ]
 ```
 
-Use only public wallet addresses. Set `"enabled": false` to temporarily skip a wallet.
+Используйте только публичные адреса кошельков. Чтобы временно отключить кошелек, поставьте `"enabled": false`.
 
-`wallets.json` is listed in `.gitignore`, because real wallet addresses can be private operational data. Commit only `wallets.example.json`.
+`wallets.json` добавлен в `.gitignore`, потому что реальные адреса могут быть приватными операционными данными. В репозиторий коммитьте только `wallets.example.json`.
 
-## Configure networks
+## Настройка сетей
 
-`networks.json` contains:
+`networks.json` содержит:
 
 - `chain_id`
 - `native_symbol`
 - `explorer_url`
 - `api_provider`
-- optional Blockscout/Botanix API endpoint fields
+- дополнительные поля endpoint-ов для Blockscout/Botanix
 
-If a Blockscout or Botanix endpoint differs, update these fields in `networks.json`:
+Если endpoint для Blockscout или Botanix отличается, поправьте эти поля в `networks.json`:
 
 ```json
 "api_base_url": "https://example.com/api/v2",
@@ -97,39 +97,39 @@ If a Blockscout or Botanix endpoint differs, update these fields in `networks.js
 "token_transfers_endpoint": "/addresses/{address}/token-transfers"
 ```
 
-For Blockscout API keys, you can also adjust:
+Для API-ключей Blockscout можно также настроить:
 
 ```json
 "api_key_header": "Authorization",
 "api_key_prefix": "Bearer "
 ```
 
-For BotanixScan-compatible APIs, you can adjust account API actions:
+Для Etherscan-style API у BotanixScan можно настроить account API actions:
 
 ```json
 "native_action": "txlist",
 "token_action": "tokentx"
 ```
 
-## Test Telegram
+## Проверка Telegram
 
 ```bash
 python main.py --test-telegram
 ```
 
-This sends:
+Команда отправляет тестовое сообщение:
 
 ```text
 Wallet watcher test message
 ```
 
-## Test APIs
+## Проверка API
 
 ```bash
 python main.py --test-api
 ```
 
-The command prints every network with provider status:
+Команда выводит диагностику по каждой сети:
 
 ```text
 Network: Ethereum
@@ -146,35 +146,35 @@ Network: Ethereum
   Message: OK
 ```
 
-API keys are masked in diagnostics. Only the first 4 and last 4 characters are shown.
+API-ключи в диагностике маскируются. Показываются только первые 4 и последние 4 символа.
 
-## Run one check
+## Однократная проверка
 
 ```bash
 python main.py --once
 ```
 
-On first run, the script saves the current latest outgoing transactions into `state.json` and logs `Initial state saved`. It does not send Telegram alerts for old history.
+При первом запуске скрипт сохраняет текущие последние исходящие транзакции в `state.json` и пишет в лог `Initial state saved`. Старые транзакции в Telegram не отправляются.
 
-## Run monitoring
+## Обычный мониторинг
 
 ```bash
 python main.py
 ```
 
-By default it checks every 5 minutes. Change this with `CHECK_INTERVAL_SECONDS` in `.env`.
+По умолчанию проверка идет каждые 5 минут. Интервал можно изменить через `CHECK_INTERVAL_SECONDS` в `.env`.
 
-If there are no new outgoing transactions or token transfers, Telegram stays silent.
+Если новых исходящих транзакций или token transfers нет, Telegram молчит.
 
-## Prepare for GitHub
+## Подготовка к GitHub
 
-Repository URL:
+URL репозитория:
 
 ```text
 https://github.com/OlegAA1/wallet-watcher
 ```
 
-The repository is prepared so these files are not committed:
+Проект подготовлен так, чтобы эти файлы не попадали в коммит:
 
 - `.env`
 - `state.json`
@@ -185,13 +185,13 @@ The repository is prepared so these files are not committed:
 - `.venv/`
 - `venv/`
 
-Commit the example files instead:
+В репозиторий добавляются только файлы-примеры:
 
 - `.env.example`
 - `wallets.example.json`
 - `state.example.json`
 
-First push:
+Первый push:
 
 ```bash
 git init
@@ -202,24 +202,24 @@ git remote add origin https://github.com/OlegAA1/wallet-watcher.git
 git push -u origin main
 ```
 
-If `origin` already exists:
+Если `origin` уже существует:
 
 ```bash
 git remote set-url origin https://github.com/OlegAA1/wallet-watcher.git
 git push -u origin main
 ```
 
-Before pushing, check what will be committed:
+Перед push проверьте, что попадет в коммит:
 
 ```bash
 git status --short
 ```
 
-Do not push real API keys, Telegram tokens, Telegram chat IDs, real wallet lists, seed phrases, private keys, wallet passwords, or any other private data.
+Не пушьте реальные API-ключи, Telegram token, Telegram chat ID, реальные списки кошельков, seed phrase, private key, wallet password или любые другие приватные данные.
 
-## Run on VPS with tmux or screen
+## Запуск на VPS через tmux или screen
 
-With `tmux`:
+Через `tmux`:
 
 ```bash
 tmux new -s wallet-watcher
@@ -227,13 +227,13 @@ source .venv/bin/activate
 python main.py
 ```
 
-Detach with `Ctrl-b`, then `d`. Reattach later:
+Отключиться от сессии: `Ctrl-b`, затем `d`. Вернуться позже:
 
 ```bash
 tmux attach -t wallet-watcher
 ```
 
-With `screen`:
+Через `screen`:
 
 ```bash
 screen -S wallet-watcher
@@ -241,53 +241,53 @@ source .venv/bin/activate
 python main.py
 ```
 
-Detach with `Ctrl-a`, then `d`. Reattach later:
+Отключиться от сессии: `Ctrl-a`, затем `d`. Вернуться позже:
 
 ```bash
 screen -r wallet-watcher
 ```
 
-## Deploy on VPS with systemd
+## Deploy на VPS через systemd
 
-The systemd service runs the normal infinite monitoring mode:
+Systemd-сервис запускает обычный бесконечный мониторинг:
 
 ```bash
 python main.py
 ```
 
-Run `--once`, `--test-api`, and `--test-telegram` manually when needed.
+Режимы `--once`, `--test-api` и `--test-telegram` запускаются вручную, когда нужны.
 
-Assumed server path:
+Предполагаемый путь проекта на сервере:
 
 ```text
 /opt/wallet-watcher
 ```
 
-Service user:
+Пользователь сервиса:
 
 ```text
 walletwatcher
 ```
 
-1. Create the service user:
+1. Создать пользователя сервиса:
 
 ```bash
 sudo useradd --system --create-home --shell /usr/sbin/nologin walletwatcher
 ```
 
-2. Clone the project:
+2. Склонировать проект:
 
 ```bash
 sudo git clone https://github.com/OlegAA1/wallet-watcher.git /opt/wallet-watcher
 ```
 
-3. Assign ownership:
+3. Назначить права:
 
 ```bash
 sudo chown -R walletwatcher:walletwatcher /opt/wallet-watcher
 ```
 
-4. Create the virtual environment:
+4. Создать виртуальное окружение:
 
 ```bash
 cd /opt/wallet-watcher
@@ -295,27 +295,27 @@ sudo -u walletwatcher python3 -m venv .venv
 sudo -u walletwatcher .venv/bin/pip install -r requirements.txt
 ```
 
-5. Create `.env`:
+5. Создать `.env`:
 
 ```bash
 sudo -u walletwatcher cp .env.example .env
 sudo nano .env
 ```
 
-6. Create `wallets.json`:
+6. Создать `wallets.json`:
 
 ```bash
 sudo -u walletwatcher cp wallets.example.json wallets.json
 sudo nano wallets.json
 ```
 
-7. Create the systemd service file:
+7. Создать systemd service файл:
 
 ```bash
 sudo nano /etc/systemd/system/wallet-watcher.service
 ```
 
-Use this content:
+Содержимое файла:
 
 ```ini
 [Unit]
@@ -337,77 +337,77 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-8. Reload systemd:
+8. Перезагрузить systemd:
 
 ```bash
 sudo systemctl daemon-reload
 ```
 
-9. Enable autostart:
+9. Включить автозапуск:
 
 ```bash
 sudo systemctl enable wallet-watcher
 ```
 
-10. Start the service:
+10. Запустить сервис:
 
 ```bash
 sudo systemctl start wallet-watcher
 ```
 
-11. Check status:
+11. Проверить статус:
 
 ```bash
 sudo systemctl status wallet-watcher
 ```
 
-12. Watch logs:
+12. Смотреть логи:
 
 ```bash
 journalctl -u wallet-watcher -f
 ```
 
-Application logs are also written to:
+Логи приложения также пишутся сюда:
 
 ```text
 /opt/wallet-watcher/logs/events.log
 ```
 
-After changing `.env` or `wallets.json`, restart the service:
+После изменения `.env` или `wallets.json` перезапустите сервис:
 
 ```bash
 sudo systemctl restart wallet-watcher
 ```
 
-### Server test commands
+### Тестовые команды на сервере
 
-Test Telegram:
+Проверить Telegram:
 
 ```bash
 sudo -u walletwatcher /opt/wallet-watcher/.venv/bin/python /opt/wallet-watcher/main.py --test-telegram
 ```
 
-Test APIs:
+Проверить API:
 
 ```bash
 sudo -u walletwatcher /opt/wallet-watcher/.venv/bin/python /opt/wallet-watcher/main.py --test-api
 ```
 
-Run one scan:
+Запустить одну проверку:
 
 ```bash
 sudo -u walletwatcher /opt/wallet-watcher/.venv/bin/python /opt/wallet-watcher/main.py --once
 ```
 
-## State and duplicate protection
+## State и защита от дублей
 
-`state.json` stores processed hashes by:
+`state.json` хранит обработанные hashes по ключу:
 
 ```text
 network:wallet_address:event_type
 ```
 
-Example:
+Пример:
 
 ```json
 {
@@ -416,14 +416,14 @@ Example:
 }
 ```
 
-Addresses are compared case-insensitively. Already processed hashes are not alerted again.
+Адреса сравниваются case-insensitive. Уже обработанные hashes повторно в Telegram не отправляются.
 
-## Logs
+## Логи
 
-Runtime errors are written to:
+Ошибки runtime пишутся в:
 
 ```text
 logs/events.log
 ```
 
-API keys and Telegram tokens are not written to logs by the application.
+API-ключи и Telegram tokens приложение в логи не пишет.
