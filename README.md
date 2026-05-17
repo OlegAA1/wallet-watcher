@@ -443,6 +443,14 @@ sudo -u walletwatcher /opt/wallet-watcher/.venv/bin/python /opt/wallet-watcher/m
 sudo -u walletwatcher /opt/wallet-watcher/.venv/bin/python /opt/wallet-watcher/main.py --once
 ```
 
+Показать состояние сервера и файлов проекта:
+
+```bash
+sudo -u walletwatcher /opt/wallet-watcher/.venv/bin/python /opt/wallet-watcher/main.py --server-status
+```
+
+Команда показывает load average, CPU, RAM, disk usage, uptime, размер `logs/events.log` и сводку по `state.json`.
+
 ## State и защита от дублей
 
 `state.json` хранит обработанные hashes по ключу:
