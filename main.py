@@ -4,10 +4,9 @@ import argparse
 import logging
 import signal
 
-from config import BASE_DIR, LOG_FILE, NETWORKS_FILE, STATE_FILE, load_networks, load_settings, load_wallets, setup_logging
+from config import NETWORKS_FILE, STATE_FILE, load_networks, load_settings, load_wallets, setup_logging
 from services.notifier import TelegramNotifier
 from services.scanner import WalletScanner
-from services.server_status import collect_server_status, print_server_status
 from services.storage import StateStorage
 
 
@@ -36,15 +35,9 @@ def main() -> None:
     parser.add_argument("--once", action="store_true", help="Run one scan and exit.")
     parser.add_argument("--test-api", action="store_true", help="Check provider API access for all configured networks.")
     parser.add_argument("--test-telegram", action="store_true", help="Send a Telegram test message and exit.")
-    parser.add_argument("--server-status", action="store_true", help="Print server load and project runtime status.")
     args = parser.parse_args()
 
     setup_logging()
-
-    if args.server_status:
-        print_server_status(collect_server_status(BASE_DIR, STATE_FILE, LOG_FILE))
-        return
-
     scanner = build_scanner()
 
     def handle_shutdown(signum, frame):
