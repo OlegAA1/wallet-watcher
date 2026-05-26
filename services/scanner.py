@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import logging
 import threading
 import time
@@ -191,6 +192,12 @@ class WalletScanner:
             if self.storage.has_seen(network["name"], wallet["address"], event_type, tx_hash):
                 continue
 
+            if self._is_stale_event(event):
+                self.storage.add(network["name"], wallet["address"], event_type, tx_hash)
+                self._save_state_or_log()
+                logger.info("Old event skipped for %s / %s / %s", wallet["name"], network["name"], tx_hash)
+                continue
+
             alert_event = {
                 **event,
                 "event_type": "native tx" if event_type == "native" else "ERC-20 transfer",
@@ -207,6 +214,17 @@ class WalletScanner:
             sent = self.notifier.send_alert(alert_event)
             if sent:
                 logger.info("Alert sent for %s / %s / %s", wallet["name"], network["name"], tx_hash)
+
+    def _is_stale_event(self, event: dict) -> bool:
+        max_age = int(self.settings.get("max_event_age_seconds", 0))
+        if max_age <= 0:
+            return False
+
+        timestamp = _event_timestamp(event.get("timestamp"))
+        if timestamp is None:
+            return False
+
+        return (time.time() - timestamp) > max_age
 
     def _outgoing(self, events: list[dict], wallet_address: str) -> list[dict]:
         normalized_wallet = wallet_address.lower()
@@ -262,3 +280,27 @@ class WalletScanner:
                 limit=limit,
             ),
         }
+
+
+def _event_timestamp(value) -> float | None:
+    if value in (None, "", 0, "0"):
+        return None
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip()
+    if text.isdigit():
+        return float(text)
+
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.timestamp()

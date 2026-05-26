@@ -117,6 +117,7 @@ class BlockscoutProvider:
             "to_address": _address_value(tx.get("to")),
             "asset": network["native_symbol"],
             "amount": _format_units(tx.get("value", "0"), 18),
+            "timestamp": tx.get("timestamp"),
         }
 
     def _normalize_token_transfer(self, transfer: dict, network: dict) -> dict:
@@ -131,6 +132,7 @@ class BlockscoutProvider:
             "to_address": _address_value(transfer.get("to")),
             "asset": token.get("symbol") or token.get("address") or "ERC-20",
             "amount": _format_units(raw_value, _safe_int(decimals, 0)),
+            "timestamp": transfer.get("timestamp"),
         }
 
 

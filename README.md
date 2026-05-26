@@ -55,6 +55,7 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_CHAT_ID=your_telegram_chat_id
 API_CHECK_INTERVAL_SECONDS=300
 BLOCKPI_CHECK_INTERVAL_SECONDS=300
+MAX_EVENT_AGE_SECONDS=86400
 ```
 
 `.env` добавлен в `.gitignore`. Не коммитьте его, не вставляйте в чаты и не храните секреты в истории shell.
@@ -207,6 +208,8 @@ BLOCKPI_CHECK_INTERVAL_SECONDS=300
 Старый `CHECK_INTERVAL_SECONDS` еще поддерживается как fallback для `API_CHECK_INTERVAL_SECONDS`, если новая переменная не указана.
 
 Для большого числа кошельков, например 100+, текущий BlockPI provider может быть дорогим по RPC-запросам, потому что сканирует блоки отдельно для каждого кошелька. Для такого масштаба лучше доработать сканирование по сети один раз за цикл и сравнивать найденные транзакции со всеми адресами.
+
+`MAX_EVENT_AGE_SECONDS=86400` запрещает отправлять Telegram-alert по транзакциям старше 24 часов. Старые hashes при этом сохраняются в `state.json`, чтобы они не всплывали повторно.
 
 Если новых исходящих транзакций или token transfers нет, Telegram молчит.
 

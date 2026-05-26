@@ -151,6 +151,7 @@ class EtherscanV2Provider:
             "to_address": tx.get("to", ""),
             "asset": network["native_symbol"],
             "amount": _format_units(tx.get("value", "0"), 18),
+            "timestamp": _safe_int(tx.get("timeStamp"), 0),
         }
 
     def _normalize_token_transfer(self, tx: dict, network: dict) -> dict:
@@ -162,6 +163,7 @@ class EtherscanV2Provider:
             "to_address": tx.get("to", ""),
             "asset": tx.get("tokenSymbol") or tx.get("contractAddress") or "ERC-20",
             "amount": _format_units(tx.get("value", "0"), decimals),
+            "timestamp": _safe_int(tx.get("timeStamp"), 0),
         }
 
 

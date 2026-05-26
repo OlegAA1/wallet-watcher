@@ -21,6 +21,7 @@ class BlockPiRpcProvider:
         self.timeout = timeout
         self.limit = limit
         self.token_cache: dict[tuple[int, str], dict] = {}
+        self.block_timestamp_cache: dict[tuple[str, int], int] = {}
 
     def get_native_transactions(self, network: dict, address: str) -> list[dict]:
         url = self._rpc_url(network, address)
@@ -35,6 +36,7 @@ class BlockPiRpcProvider:
                 "eth_getBlockByNumber",
                 [hex(block_number), True],
             )
+            timestamp = _hex_to_int(block.get("timestamp", "0x0"))
             for tx in block.get("transactions", []):
                 if tx.get("from", "").lower() != normalized_address:
                     continue
@@ -46,6 +48,7 @@ class BlockPiRpcProvider:
                         "to_address": tx.get("to", ""),
                         "asset": network["native_symbol"],
                         "amount": _format_units(_hex_to_int(tx.get("value", "0x0")), 18),
+                        "timestamp": timestamp,
                     }
                 )
                 if len(events) >= self.limit:
@@ -74,6 +77,7 @@ class BlockPiRpcProvider:
                 continue
             token_address = log.get("address", "")
             token = self._token_metadata(network, url, token_address)
+            block_number = _hex_to_int(log.get("blockNumber", "0x0"))
             events.append(
                 {
                     "event_type": "erc20",
@@ -82,6 +86,7 @@ class BlockPiRpcProvider:
                     "to_address": _topic_to_address(topics[2]),
                     "asset": token["symbol"],
                     "amount": _format_units(_hex_to_int(log.get("data", "0x0")), token["decimals"]),
+                    "timestamp": self._block_timestamp(url, block_number),
                 }
             )
             if len(events) >= self.limit:
@@ -136,6 +141,15 @@ class BlockPiRpcProvider:
 
     def _latest_block(self, url: str) -> int:
         return int(self._rpc(url, "eth_blockNumber", []), 16)
+
+    def _block_timestamp(self, url: str, block_number: int) -> int:
+        key = (url, block_number)
+        if key in self.block_timestamp_cache:
+            return self.block_timestamp_cache[key]
+        block = self._rpc(url, "eth_getBlockByNumber", [hex(block_number), False])
+        timestamp = _hex_to_int(block.get("timestamp", "0x0"))
+        self.block_timestamp_cache[key] = timestamp
+        return timestamp
 
     def _token_metadata(self, network: dict, url: str, token_address: str) -> dict:
         key = (int(network["chain_id"]), token_address.lower())
