@@ -99,7 +99,14 @@ cp wallets.example.json wallets.json
 - `native_symbol`
 - `explorer_url`
 - `api_provider`
+- `enabled`
 - дополнительные поля endpoint-ов для Blockscout/Botanix
+
+Чтобы временно отключить проблемную сеть, добавьте или измените:
+
+```json
+"enabled": false
+```
 
 Если endpoint для Blockscout или Botanix отличается, поправьте эти поля в `networks.json`:
 

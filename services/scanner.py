@@ -35,7 +35,7 @@ class WalletScanner:
 
     def run_once(self, networks: list[dict] | None = None) -> None:
         initial_state_changed = False
-        scan_networks = networks if networks is not None else self.networks
+        scan_networks = self._enabled_networks(networks if networks is not None else self.networks)
 
         for wallet in self._enabled_wallets():
             if self.stop_event.is_set():
@@ -141,7 +141,7 @@ class WalletScanner:
 
     def test_apis(self) -> list[dict]:
         results = []
-        for network in self.networks:
+        for network in self._enabled_networks(self.networks):
             provider = self.providers.get(network.get("api_provider"))
             if provider is None:
                 results.append(
@@ -241,17 +241,24 @@ class WalletScanner:
             if wallet.get("enabled", True) and wallet.get("address")
         ]
 
+    def _enabled_networks(self, networks: list[dict]) -> list[dict]:
+        return [
+            network
+            for network in networks
+            if network.get("enabled", True)
+        ]
+
     def _networks_with_provider(self, provider_name: str) -> list[dict]:
         return [
             network
-            for network in self.networks
+            for network in self._enabled_networks(self.networks)
             if network.get("api_provider") == provider_name
         ]
 
     def _networks_without_provider(self, provider_name: str) -> list[dict]:
         return [
             network
-            for network in self.networks
+            for network in self._enabled_networks(self.networks)
             if network.get("api_provider") != provider_name
         ]
 

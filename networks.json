@@ -74,6 +74,7 @@
     "native_symbol": "ETH",
     "explorer_url": "https://scrollscan.com",
     "api_provider": "blockscout",
+    "enabled": false,
     "api_base_url": "https://blockscout.scroll.io/api/v2",
     "transactions_endpoint": "/addresses/{address}/transactions",
     "token_transfers_endpoint": "/addresses/{address}/token-transfers"
@@ -84,6 +85,7 @@
     "native_symbol": "ETH",
     "explorer_url": "https://explorer.zora.energy",
     "api_provider": "blockscout",
+    "enabled": false,
     "api_base_url": "https://explorer.zora.energy/api/v2",
     "transactions_endpoint": "/addresses/{address}/transactions",
     "token_transfers_endpoint": "/addresses/{address}/token-transfers"
@@ -94,6 +96,7 @@
     "native_symbol": "PLUME",
     "explorer_url": "https://explorer.plume.org",
     "api_provider": "blockscout",
+    "enabled": false,
     "api_base_url": "https://explorer.plume.org/api/v2",
     "transactions_endpoint": "/addresses/{address}/transactions",
     "token_transfers_endpoint": "/addresses/{address}/token-transfers"
@@ -104,6 +107,7 @@
     "native_symbol": "G",
     "explorer_url": "https://explorer.gravity.xyz",
     "api_provider": "blockscout",
+    "enabled": false,
     "api_base_url": "https://explorer.gravity.xyz/api/v2",
     "transactions_endpoint": "/addresses/{address}/transactions",
     "token_transfers_endpoint": "/addresses/{address}/token-transfers"
