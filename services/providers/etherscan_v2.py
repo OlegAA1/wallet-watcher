@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from collections.abc import Sequence
@@ -23,13 +24,21 @@ ETHERSCAN_V2_URL = "https://api.etherscan.io/v2/api"
 
 
 class EtherscanV2Provider:
-    def __init__(self, api_key: str | Sequence[str], timeout: int = 20, limit: int = 50):
+    def __init__(
+        self,
+        api_key: str | Sequence[str],
+        timeout: int = 20,
+        limit: int = 50,
+        calls_per_second: float = 3,
+    ):
         if isinstance(api_key, str):
             self.api_keys = [api_key] if api_key else []
         else:
             self.api_keys = [key for key in api_key if key]
         self.timeout = timeout
         self.limit = limit
+        self.min_interval = 1 / calls_per_second if calls_per_second > 0 else 0
+        self._last_call: dict[str, float] = {}
 
     def get_native_transactions(self, network: dict, address: str) -> list[dict]:
         result = self._request(network, address, "txlist")
@@ -39,7 +48,17 @@ class EtherscanV2Provider:
     def get_token_transfers(self, network: dict, address: str) -> list[dict]:
         result = self._request(network, address, "tokentx")
         transfers = result[: self.limit]
-        return [self._normalize_token_transfer(tx, network) for tx in transfers if tx.get("hash")]
+        events = [self._normalize_token_transfer(tx, network) for tx in transfers if tx.get("hash")]
+        # tokentx has no log index, so a transfer is identified by its content;
+        # identical transfers inside one transaction get a counter.
+        counts: dict[str, int] = {}
+        for event in events:
+            base = event.pop("_identity")
+            index = counts.get(base, 0)
+            counts[base] = index + 1
+            digest = hashlib.sha1(f"{base}:{index}".encode()).hexdigest()[:10]
+            event["event_id"] = f"{event['tx_hash']}:{digest}"
+        return events
 
     def test_network(self, network: dict) -> tuple[bool, str]:
         diagnostic = self.diagnostic_network(network)
@@ -134,6 +153,7 @@ class EtherscanV2Provider:
 
     def _get_account_response(self, url: str, params: dict) -> dict:
         for attempt in range(3):
+            self._throttle(str(params.get("apikey", "")))
             data = get_json(url, params=params, timeout=self.timeout)
             result = data.get("result", "")
             message = result if isinstance(result, str) else str(data.get("message", ""))
@@ -143,16 +163,28 @@ class EtherscanV2Provider:
             return data
         raise RateLimitError("Rate limit from Etherscan API")
 
+    def _throttle(self, api_key: str) -> None:
+        """Keep each API key under the per-second limit of its plan."""
+        if not self.min_interval:
+            return
+        wait = self._last_call.get(api_key, 0.0) + self.min_interval - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        self._last_call[api_key] = time.monotonic()
+
     def _normalize_native(self, tx: dict, network: dict) -> dict:
-        return {
+        event = {
             "event_type": "native",
             "tx_hash": tx.get("hash", ""),
             "from_address": tx.get("from", ""),
-            "to_address": tx.get("to", ""),
+            "to_address": tx.get("to", "") or "contract creation",
             "asset": network["native_symbol"],
             "amount": _format_units(tx.get("value", "0"), 18),
             "timestamp": _safe_int(tx.get("timeStamp"), 0),
         }
+        if str(tx.get("isError", "0")) == "1":
+            event["status"] = "FAILED (reverted)"
+        return event
 
     def _normalize_token_transfer(self, tx: dict, network: dict) -> dict:
         decimals = _safe_int(tx.get("tokenDecimal"), 0)
@@ -164,6 +196,9 @@ class EtherscanV2Provider:
             "asset": tx.get("tokenSymbol") or tx.get("contractAddress") or "ERC-20",
             "amount": _format_units(tx.get("value", "0"), decimals),
             "timestamp": _safe_int(tx.get("timeStamp"), 0),
+            "_identity": ":".join(
+                str(tx.get(field, "")).lower() for field in ("hash", "contractAddress", "to", "value")
+            ),
         }
 
 

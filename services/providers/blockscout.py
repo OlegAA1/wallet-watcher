@@ -28,9 +28,13 @@ class BlockscoutProvider:
 
     def get_token_transfers(self, network: dict, address: str) -> list[dict]:
         endpoint = network.get("token_transfers_endpoint", "/addresses/{address}/token-transfers")
-        data = self._request(network, endpoint, address)
+        data = self._request(network, endpoint, address, params={"type": "ERC-20"})
         items = self._items(data)[: self.limit]
-        return [self._normalize_token_transfer(tx, network) for tx in items if tx.get("tx_hash") or tx.get("transaction_hash")]
+        return [
+            self._normalize_token_transfer(tx, network)
+            for tx in items
+            if (tx.get("tx_hash") or tx.get("transaction_hash")) and _is_erc20(tx)
+        ]
 
     def test_network(self, network: dict) -> tuple[bool, str]:
         diagnostic = self.diagnostic_network(network)
@@ -38,9 +42,20 @@ class BlockscoutProvider:
 
     def diagnostic_network(self, network: dict) -> dict:
         address = "0x0000000000000000000000000000000000000000"
-        endpoint = network.get("transactions_endpoint", "/addresses/{address}/transactions")
+        # Check both endpoints with exactly the requests the scanner sends.
+        diagnostic: dict = {}
+        for endpoint, params in (
+            (network.get("transactions_endpoint", "/addresses/{address}/transactions"), None),
+            (network.get("token_transfers_endpoint", "/addresses/{address}/token-transfers"), {"type": "ERC-20"}),
+        ):
+            diagnostic = self._diagnose(network, endpoint, address, params)
+            if not diagnostic["ok"]:
+                break
+        return diagnostic
+
+    def _diagnose(self, network: dict, endpoint: str, address: str, params: dict | None) -> dict:
         try:
-            url, params, headers = self._build_request(network, endpoint, address, limit=1)
+            url, params, headers = self._build_request(network, endpoint, address, params)
         except Exception as error:
             return {
                 "network": network.get("name", "Unknown"),
@@ -62,25 +77,29 @@ class BlockscoutProvider:
             "network": network.get("name", "Unknown"),
             "provider": "blockscout",
             "chain_id": network.get("chain_id"),
-            "endpoint": f"{url}?limit={params['limit']}",
+            "endpoint": url,
             "api_key": mask_secret(self._api_key(address)),
             "response_received": response["response_received"],
             "http_status": response["http_status"],
             **classification,
         }
 
-    def _request(self, network: dict, endpoint: str, address: str, limit: int | None = None) -> dict | list:
-        url, params, headers = self._build_request(network, endpoint, address, limit or self.limit)
+    def _request(self, network: dict, endpoint: str, address: str, params: dict | None = None) -> dict | list:
+        url, params, headers = self._build_request(network, endpoint, address, params)
         return get_json(url, params=params, headers=headers, timeout=self.timeout)
 
-    def _build_request(self, network: dict, endpoint: str, address: str, limit: int) -> tuple[str, dict, dict]:
+    def _build_request(
+        self, network: dict, endpoint: str, address: str, params: dict | None = None
+    ) -> tuple[str, dict, dict]:
         base_url = network.get("api_base_url")
         if not base_url:
             raise ValueError("api_base_url is missing in networks.json")
 
         path = endpoint.format(address=address)
         url = urljoin(base_url.rstrip("/") + "/", path.lstrip("/"))
-        params = {"limit": limit}
+        # Blockscout returns a fixed page of 50 items; an extra "limit" parameter
+        # is rejected with HTTP 422 by current versions.
+        params = dict(params or {})
         headers = {}
         api_key = self._api_key(address)
         if api_key:
@@ -110,30 +129,41 @@ class BlockscoutProvider:
         return []
 
     def _normalize_native(self, tx: dict, network: dict) -> dict:
-        return {
+        event = {
             "event_type": "native",
             "tx_hash": tx.get("hash", ""),
             "from_address": _address_value(tx.get("from")),
-            "to_address": _address_value(tx.get("to")),
+            "to_address": _address_value(tx.get("to")) or "contract creation",
             "asset": network["native_symbol"],
             "amount": _format_units(tx.get("value", "0"), 18),
             "timestamp": tx.get("timestamp"),
         }
+        if tx.get("status") == "error":
+            event["status"] = "FAILED (reverted)"
+        return event
 
     def _normalize_token_transfer(self, transfer: dict, network: dict) -> dict:
         token = transfer.get("token") or {}
         total = transfer.get("total") or {}
         raw_value = total.get("value") if isinstance(total, dict) else transfer.get("value", "0")
         decimals = total.get("decimals") if isinstance(total, dict) else token.get("decimals")
+        tx_hash = transfer.get("tx_hash") or transfer.get("transaction_hash") or ""
+        log_index = transfer.get("log_index")
         return {
             "event_type": "erc20",
-            "tx_hash": transfer.get("tx_hash") or transfer.get("transaction_hash") or transfer.get("transaction_hashes", [""])[0],
+            "tx_hash": tx_hash,
+            "event_id": f"{tx_hash}:{log_index}" if log_index is not None else tx_hash,
             "from_address": _address_value(transfer.get("from")),
             "to_address": _address_value(transfer.get("to")),
-            "asset": token.get("symbol") or token.get("address") or "ERC-20",
+            "asset": token.get("symbol") or token.get("address_hash") or token.get("address") or "ERC-20",
             "amount": _format_units(raw_value, _safe_int(decimals, 0)),
             "timestamp": transfer.get("timestamp"),
         }
+
+
+def _is_erc20(transfer: dict) -> bool:
+    token_type = (transfer.get("token") or {}).get("type")
+    return token_type in (None, "", "ERC-20")
 
 
 def _address_value(value) -> str:

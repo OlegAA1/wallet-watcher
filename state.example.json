@@ -3,6 +3,17 @@
     "0xhash1"
   ],
   "Ethereum:0x123:erc20": [
-    "0xhash2"
-  ]
+    "0xhash2:3"
+  ],
+  "_meta": {
+    "rpc": {
+      "Base": {
+        "last_block": 56994633,
+        "nonces": {
+          "0x123": 42
+        }
+      }
+    },
+    "pending_alerts": []
+  }
 }

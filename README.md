@@ -7,22 +7,17 @@
 
 Скрипт не использует seed phrase, private key, пароль от кошелька, браузерные профили, расширения кошельков, подписи транзакций или любые действия с кошельками. Он только читает публичные данные explorer/API.
 
-## Поддерживаемые сети в v1
+## Поддерживаемые сети
 
-- Ethereum
-- Base
-- Linea
-- Plume
-- Botanix
-- Scroll
-- Arbitrum
-- Polygon
-- Avalanche
-- opBNB
-- Zora
-- Taiko
-- Gravity
-- Optimism / OP Mainnet
+| Сеть | Источник данных | Что нужно |
+|---|---|---|
+| Ethereum, Linea, Arbitrum, Polygon, Taiko | Etherscan API V2 (`etherscan_v2`) | `ETHERSCAN_API_KEY`, хватает бесплатного тарифа |
+| Base, Avalanche, Optimism | RPC (`rpc`) | RPC URL в `.env`, например BlockPI |
+| opBNB, Gravity | RPC (`rpc`) | ничего, используется публичный RPC из `networks.json` |
+| Scroll, Plume | Blockscout API (`blockscout`) | ничего |
+| Zora | Blockscout API | выключена: обозреватель закрыт защитой Cloudflare |
+
+Base, Optimism и Avalanche на бесплатном тарифе Etherscan недоступны, opBNB и Scroll Etherscan V2 не поддерживает вообще, поэтому они читаются через RPC и Blockscout. Botanix удалён: его обозреватель и API больше не работают.
 
 ## Установка зависимостей
 
@@ -46,21 +41,22 @@ cp .env.example .env
 
 ```bash
 ETHERSCAN_API_KEY=your_etherscan_api_key
-BLOCKSCOUT_API_KEY=your_blockscout_api_key
-BOTANIXSCAN_API_KEY=your_botanixscan_api_key
+BLOCKSCOUT_API_KEY=
 BLOCKPI_BASE_RPC_URL=
 BLOCKPI_AVALANCHE_RPC_URL=
 BLOCKPI_OPTIMISM_RPC_URL=
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_CHAT_ID=your_telegram_chat_id
 API_CHECK_INTERVAL_SECONDS=300
-BLOCKPI_CHECK_INTERVAL_SECONDS=300
+RPC_CHECK_INTERVAL_SECONDS=120
 MAX_EVENT_AGE_SECONDS=86400
+ETHERSCAN_CALLS_PER_SECOND=3
+NETWORK_FAILURE_ALERT_CYCLES=3
 ```
 
 `.env` добавлен в `.gitignore`. Не коммитьте его, не вставляйте в чаты и не храните секреты в истории shell.
 
-Если у вас несколько API-ключей или BlockPI endpoint-ов, укажите их через запятую. Скрипт будет стабильно распределять кошельки между ключами по адресу:
+Если у вас несколько API-ключей Etherscan, укажите их через запятую — кошельки стабильно распределяются между ключами по адресу. Несколько RPC URL через запятую работают как резерв: если первый endpoint не отвечает, скан повторяется на следующем.
 
 ```bash
 ETHERSCAN_API_KEY=key_1,key_2,key_3
@@ -100,7 +96,7 @@ cp wallets.example.json wallets.json
 - `explorer_url`
 - `api_provider`
 - `enabled`
-- дополнительные поля endpoint-ов для Blockscout/Botanix
+- дополнительные поля endpoint-ов для Blockscout и RPC
 
 Чтобы временно отключить проблемную сеть, добавьте или измените:
 
@@ -108,7 +104,7 @@ cp wallets.example.json wallets.json
 "enabled": false
 ```
 
-Если endpoint для Blockscout или Botanix отличается, поправьте эти поля в `networks.json`:
+Если endpoint для Blockscout отличается, поправьте эти поля в `networks.json`:
 
 ```json
 "api_base_url": "https://example.com/api/v2",
@@ -123,15 +119,19 @@ cp wallets.example.json wallets.json
 "api_key_prefix": "Bearer "
 ```
 
-Для Etherscan-style API у BotanixScan можно настроить account API actions:
+### RPC-сети
+
+Сеть с `"api_provider": "rpc"` читается напрямую через JSON-RPC. URL задаётся одним из двух способов:
 
 ```json
-"api_base_url": "https://api.routescan.io/v2/network/mainnet/evm/3637/etherscan/api",
-"native_action": "txlist",
-"token_action": "tokentx"
+"rpc_url_env": "BLOCKPI_BASE_RPC_URL"
 ```
 
-Base, Avalanche и Optimism можно мониторить через BlockPI RPC endpoint-ы. URL с ключами храните только в `.env`:
+```json
+"rpc_url": "https://rpc.gravity.xyz"
+```
+
+`rpc_url_env` — имя переменной из `.env`, так хранятся URL с ключами. `rpc_url` — публичный endpoint без секрета. Можно указать оба: публичный будет резервным.
 
 ```bash
 BLOCKPI_BASE_RPC_URL=https://base.blockpi.network/v1/rpc/your-rpc-key
@@ -139,20 +139,32 @@ BLOCKPI_AVALANCHE_RPC_URL=https://avalanche.blockpi.network/v1/rpc/your-rpc-key
 BLOCKPI_OPTIMISM_RPC_URL=https://optimism-classic.blockpi.network/v1/rpc/your-rpc-key
 ```
 
-Для этих сетей provider `blockpi_rpc` сканирует последние блоки:
+Как работает сканирование:
 
-- native outgoing tx ищутся в транзакциях блоков
-- ERC-20 outgoing transfers ищутся через `eth_getLogs` по событию `Transfer`
+- сеть сканируется один раз за цикл сразу для всех кошельков
+- в `state.json` хранится номер последнего проверенного блока; следующий цикл продолжает с него, поэтому простой или долгий интервал не приводят к пропускам
+- исходящие ERC-20 transfers ищутся через `eth_getLogs` по событию `Transfer` на всём диапазоне новых блоков
+- исходящие транзакции определяются по nonce кошелька (`eth_getTransactionCount`); блоки скачиваются, только если nonce вырос
+- если nonce вырос, а транзакция в блоках не найдена, приходит alert со ссылкой на адрес в обозревателе
 
-Количество блоков задается в `networks.json` через `rpc_scan_blocks`. По умолчанию для этих сетей стоит `300`, чтобы оставаться ниже типичных RPC-лимитов на диапазон `eth_getLogs`.
+Необязательные поля в `networks.json`:
 
-BlockPI сети проверяются отдельным интервалом:
+| Поле | По умолчанию | Смысл |
+|---|---|---|
+| `rpc_logs_chunk_blocks` | 300 | диапазон блоков одного `eth_getLogs`; при отказе узла уменьшается автоматически |
+| `rpc_batch_size` | 10 | сколько блоков запрашивать одним batch-запросом |
+| `rpc_native_scan_max_blocks` | 3000 | сколько последних блоков просматривать в поисках транзакции |
+| `rpc_max_catchup_blocks` | 50000 | предел догоняющего скана после долгого простоя |
+
+Ограничения: через nonce не видны переводы из смарт-кошельков (Safe, ERC-4337) и внутренние переводы контрактов; NFT (ERC-721/1155) не отслеживаются.
+
+RPC-сети проверяются отдельным интервалом:
 
 ```bash
-BLOCKPI_CHECK_INTERVAL_SECONDS=300
+RPC_CHECK_INTERVAL_SECONDS=120
 ```
 
-Дефолт `300` секунд выбран так, чтобы окно `rpc_scan_blocks=300` не пропускало события на быстрых EVM-сетях. Если поставить большой интервал, например 30 часов, то текущая реализация будет видеть только последние `rpc_scan_blocks` блоков и может пропустить исходящие транзакции.
+Старое имя `BLOCKPI_CHECK_INTERVAL_SECONDS` и старое значение `"api_provider": "blockpi_rpc"` по-прежнему принимаются.
 
 ## Проверка Telegram
 
@@ -172,7 +184,7 @@ Wallet watcher test message
 python main.py --test-api
 ```
 
-Команда выводит диагностику по каждой сети:
+Команда выводит диагностику по каждой включённой сети:
 
 ```text
 Network: Ethereum
@@ -189,7 +201,7 @@ Network: Ethereum
   Message: OK
 ```
 
-API-ключи в диагностике маскируются. Показываются только первые 4 и последние 4 символа.
+Для Blockscout проверяются оба запроса (транзакции и token transfers), для RPC — `eth_blockNumber`, `eth_getLogs` на рабочем диапазоне и batch-запросы. API-ключи в диагностике маскируются.
 
 ## Однократная проверка
 
@@ -205,18 +217,22 @@ python main.py --once
 python main.py
 ```
 
-По умолчанию обычные explorer/API сети и BlockPI сети проверяются каждые 5 минут. Интервалы можно изменить в `.env`:
+Интервалы проверки задаются в `.env`:
 
 ```bash
 API_CHECK_INTERVAL_SECONDS=300
-BLOCKPI_CHECK_INTERVAL_SECONDS=300
+RPC_CHECK_INTERVAL_SECONDS=120
 ```
 
-Старый `CHECK_INTERVAL_SECONDS` еще поддерживается как fallback для `API_CHECK_INTERVAL_SECONDS`, если новая переменная не указана.
+Старый `CHECK_INTERVAL_SECONDS` ещё поддерживается как fallback для `API_CHECK_INTERVAL_SECONDS`.
 
-Для большого числа кошельков, например 100+, текущий BlockPI provider может быть дорогим по RPC-запросам, потому что сканирует блоки отдельно для каждого кошелька. Для такого масштаба лучше доработать сканирование по сети один раз за цикл и сравнивать найденные транзакции со всеми адресами.
+Etherscan: каждый кошелёк тратит 2 запроса на сеть за цикл. При интервале 300 секунд и 5 сетях это около 2 900 запросов в сутки на кошелёк. Если расчёт превышает 100 000 запросов в сутки на ключ, при старте в лог пишется предупреждение — добавьте ключи через запятую или увеличьте интервал. `ETHERSCAN_CALLS_PER_SECOND` ограничивает частоту запросов на один ключ.
 
-`MAX_EVENT_AGE_SECONDS=86400` запрещает отправлять Telegram-alert по транзакциям старше 24 часов. Старые hashes при этом сохраняются в `state.json`, чтобы они не всплывали повторно.
+`MAX_EVENT_AGE_SECONDS=86400` запрещает отправлять Telegram-alert по транзакциям старше 24 часов. Они всё равно помечаются обработанными в `state.json`.
+
+Если Telegram недоступен, alert не теряется: он сохраняется в `state.json` и отправляется при следующем цикле.
+
+Если сеть не отвечает `NETWORK_FAILURE_ALERT_CYCLES` циклов подряд (по умолчанию 3), в Telegram приходит одно предупреждение, а после восстановления — сообщение, что сеть снова работает. `0` отключает эти сообщения.
 
 Если новых исходящих транзакций или token transfers нет, Telegram молчит.
 
@@ -455,7 +471,7 @@ sudo -u walletwatcher /opt/wallet-watcher/.venv/bin/python /opt/wallet-watcher/m
 
 ## State и защита от дублей
 
-`state.json` хранит обработанные hashes по ключу:
+`state.json` хранит обработанные события по ключу:
 
 ```text
 network:wallet_address:event_type
@@ -466,11 +482,25 @@ network:wallet_address:event_type
 ```json
 {
   "Ethereum:0x123:native": ["0xhash1"],
-  "Ethereum:0x123:erc20": ["0xhash2"]
+  "Ethereum:0x123:erc20": ["0xhash2:3"],
+  "_meta": {
+    "rpc": {"Base": {"last_block": 56994633, "nonces": {"0x123": 42}}},
+    "pending_alerts": []
+  }
 }
 ```
 
-Адреса сравниваются case-insensitive. Уже обработанные hashes повторно в Telegram не отправляются.
+Token transfers идентифицируются хешем транзакции и позицией перевода, поэтому несколько переводов в одной транзакции дают отдельные alerts. Раздел `_meta` хранит последний проверенный блок и nonce для RPC-сетей, а также alerts, которые ещё не доставлены в Telegram. `state.json` от старых версий подходит без изменений.
+
+Адреса сравниваются case-insensitive. Уже обработанные события повторно в Telegram не отправляются.
+
+## Тесты
+
+```bash
+python -m unittest discover -s tests -t .
+```
+
+Тесты не ходят в сеть.
 
 ## Логи
 
@@ -479,5 +509,7 @@ network:wallet_address:event_type
 ```text
 logs/events.log
 ```
+
+Файл ротируется: до 5 МБ, хранятся 3 предыдущих файла.
 
 API-ключи и Telegram tokens приложение в логи не пишет.

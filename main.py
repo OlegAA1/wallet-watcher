@@ -41,8 +41,9 @@ def main() -> None:
     scanner = build_scanner()
 
     def handle_shutdown(signum, frame):
-        logger.info("Shutdown signal received; saving state")
-        scanner.stop()
+        # Only set a flag here: saving from a signal handler could interrupt a
+        # save that is already in progress and corrupt state.json.
+        scanner.request_stop()
 
     signal.signal(signal.SIGTERM, handle_shutdown)
     signal.signal(signal.SIGINT, handle_shutdown)
@@ -81,9 +82,9 @@ def main() -> None:
             return
         scanner.run_forever()
     except KeyboardInterrupt:
-        logger.info("Interrupted; saving state")
-        scanner.stop()
+        pass
     finally:
+        logger.info("Stopping; saving state")
         scanner.stop()
 
 

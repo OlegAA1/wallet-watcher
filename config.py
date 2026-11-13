@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import logging.handlers
 import os
 from pathlib import Path
 
@@ -22,7 +23,7 @@ def setup_logging() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         handlers=[
-            logging.FileHandler(LOG_FILE),
+            logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=5_000_000, backupCount=3, encoding="utf-8"),
             logging.StreamHandler(),
         ],
     )
@@ -34,17 +35,16 @@ def load_settings() -> dict:
     return {
         "etherscan_api_keys": _list_env("ETHERSCAN_API_KEY"),
         "blockscout_api_keys": _list_env("BLOCKSCOUT_API_KEY"),
-        "botanixscan_api_keys": _list_env("BOTANIXSCAN_API_KEY"),
-        "blockpi_rpc_urls": {
-            "BLOCKPI_BASE_RPC_URL": _list_env("BLOCKPI_BASE_RPC_URL"),
-            "BLOCKPI_AVALANCHE_RPC_URL": _list_env("BLOCKPI_AVALANCHE_RPC_URL"),
-            "BLOCKPI_OPTIMISM_RPC_URL": _list_env("BLOCKPI_OPTIMISM_RPC_URL"),
-        },
         "telegram_bot_token": os.getenv("TELEGRAM_BOT_TOKEN", ""),
         "telegram_chat_id": os.getenv("TELEGRAM_CHAT_ID", ""),
         "check_interval_seconds": legacy_interval,
         "api_check_interval_seconds": _int_env("API_CHECK_INTERVAL_SECONDS", legacy_interval),
-        "blockpi_check_interval_seconds": _int_env("BLOCKPI_CHECK_INTERVAL_SECONDS", 300),
+        # BLOCKPI_CHECK_INTERVAL_SECONDS is the old name of RPC_CHECK_INTERVAL_SECONDS.
+        "rpc_check_interval_seconds": _int_env(
+            "RPC_CHECK_INTERVAL_SECONDS", _int_env("BLOCKPI_CHECK_INTERVAL_SECONDS", 300)
+        ),
+        "etherscan_calls_per_second": _int_env("ETHERSCAN_CALLS_PER_SECOND", 3),
+        "network_failure_alert_cycles": _int_env("NETWORK_FAILURE_ALERT_CYCLES", 3),
         "max_event_age_seconds": _int_env("MAX_EVENT_AGE_SECONDS", 86400),
         "request_timeout_seconds": 20,
         "fetch_limit": 50,

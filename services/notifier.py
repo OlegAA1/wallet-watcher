@@ -56,23 +56,28 @@ class TelegramNotifier:
         return self.send_message("Wallet watcher test message")
 
     def send_alert(self, event: dict) -> bool:
-        tx_url = f"{event['explorer_url'].rstrip('/')}/tx/{event['tx_hash']}"
-        text = "\n".join(
-            [
-                "🚨 Outgoing transfer detected",
-                "",
-                f"Type: {event['event_type']}",
-                f"Wallet: {event['wallet_name']}",
-                f"Address: {event['wallet_address']}",
-                f"Network: {event['network_name']}",
-                f"Asset: {event['asset']}",
-                f"Amount: {event['amount']}",
-                f"To: {event['to_address']}",
-                f"Hash: {event['tx_hash']}",
-                f"Tx: {tx_url}",
-            ]
-        )
-        return self.send_message(text)
+        explorer = event["explorer_url"].rstrip("/")
+        lines = [
+            "🚨 Outgoing transfer detected",
+            "",
+            f"Type: {event['event_type']}",
+            f"Wallet: {event['wallet_name']}",
+            f"Address: {event['wallet_address']}",
+            f"Network: {event['network_name']}",
+            f"Asset: {event['asset']}",
+            f"Amount: {event['amount']}",
+            f"To: {event['to_address']}",
+        ]
+        if event.get("status"):
+            lines.append(f"Status: {event['status']}")
+        if event.get("tx_hash"):
+            lines.append(f"Hash: {event['tx_hash']}")
+            lines.append(f"Tx: {explorer}/tx/{event['tx_hash']}")
+        else:
+            lines.append(f"Explorer: {explorer}/address/{event['wallet_address']}")
+        if event.get("note"):
+            lines.extend(["", event["note"]])
+        return self.send_message("\n".join(lines))
 
 
 def _retry_after(response: requests.Response, default: int) -> int:
